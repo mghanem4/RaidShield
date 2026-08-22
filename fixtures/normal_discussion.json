@@ -1,0 +1,34 @@
+{
+  "fixture_name": "normal_discussion",
+  "description": "Twenty-five varied neutral comments spread across thirty minutes.",
+  "content_origin": "synthetic-safe-placeholder",
+  "expected_outcome": {"coordination_alert": false, "high_priority": false},
+  "events": [
+    {"source_event_id":"normal-01","post_id":"demo-normal","comment_id":"n01","author":"normal-a01","occurred_at":"2026-08-21T12:00:00Z","text":"Thanks for sharing the schedule"},
+    {"source_event_id":"normal-02","post_id":"demo-normal","comment_id":"n02","author":"normal-a02","occurred_at":"2026-08-21T12:01:30Z","text":"Will there be a recording later"},
+    {"source_event_id":"normal-03","post_id":"demo-normal","comment_id":"n03","author":"normal-a03","occurred_at":"2026-08-21T12:03:00Z","text":"The blue design is clear"},
+    {"source_event_id":"normal-04","post_id":"demo-normal","comment_id":"n04","author":"normal-a04","occurred_at":"2026-08-21T12:04:30Z","text":"Looking forward to the workshop"},
+    {"source_event_id":"normal-05","post_id":"demo-normal","comment_id":"n05","author":"normal-a05","occurred_at":"2026-08-21T12:06:00Z","text":"Is registration still open"},
+    {"source_event_id":"normal-06","post_id":"demo-normal","comment_id":"n06","author":"normal-a06","occurred_at":"2026-08-21T12:07:30Z","text":"The venue map helped me"},
+    {"source_event_id":"normal-07","post_id":"demo-normal","comment_id":"n07","author":"normal-a07","occurred_at":"2026-08-21T12:09:00Z","text":"I prefer the morning session"},
+    {"source_event_id":"normal-08","post_id":"demo-normal","comment_id":"n08","author":"normal-a08","occurred_at":"2026-08-21T12:10:30Z","text":"Can volunteers arrive early"},
+    {"source_event_id":"normal-09","post_id":"demo-normal","comment_id":"n09","author":"normal-a09","occurred_at":"2026-08-21T12:12:00Z","text":"Appreciate the accessibility notes"},
+    {"source_event_id":"normal-10","post_id":"demo-normal","comment_id":"n10","author":"normal-a10","occurred_at":"2026-08-21T12:13:30Z","text":"This answers my question"},
+    {"source_event_id":"normal-11","post_id":"demo-normal","comment_id":"n11","author":"normal-a11","occurred_at":"2026-08-21T12:15:00Z","text":"I shared this with our team"},
+    {"source_event_id":"normal-12","post_id":"demo-normal","comment_id":"n12","author":"normal-a12","occurred_at":"2026-08-21T12:16:30Z","text":"What time do doors open"},
+    {"source_event_id":"normal-13","post_id":"demo-normal","comment_id":"n13","author":"normal-a13","occurred_at":"2026-08-21T12:18:00Z","text":"Nice work on the new format"},
+    {"source_event_id":"normal-14","post_id":"demo-normal","comment_id":"n14","author":"normal-a14","occurred_at":"2026-08-21T12:19:30Z","text":"Could you add transit directions"},
+    {"source_event_id":"normal-15","post_id":"demo-normal","comment_id":"n15","author":"normal-a15","occurred_at":"2026-08-21T12:21:00Z","text":"The second topic interests me"},
+    {"source_event_id":"normal-16","post_id":"demo-normal","comment_id":"n16","author":"normal-a16","occurred_at":"2026-08-21T12:22:30Z","text":"Thank you to the volunteers"},
+    {"source_event_id":"normal-17","post_id":"demo-normal","comment_id":"n17","author":"normal-a17","occurred_at":"2026-08-21T12:24:00Z","text":"I found the resource list useful"},
+    {"source_event_id":"normal-18","post_id":"demo-normal","comment_id":"n18","author":"normal-a18","occurred_at":"2026-08-21T12:25:30Z","text":"Will captions be available"},
+    {"source_event_id":"normal-19","post_id":"demo-normal","comment_id":"n19","author":"normal-a19","occurred_at":"2026-08-21T12:27:00Z","text":"The introduction was concise"},
+    {"source_event_id":"normal-20","post_id":"demo-normal","comment_id":"n20","author":"normal-a20","occurred_at":"2026-08-21T12:28:30Z","text":"See everyone next week"},
+    {"source_event_id":"normal-21","post_id":"demo-normal","comment_id":"n21","author":"normal-a21","occurred_at":"2026-08-21T12:30:00Z","text":"Where can I find the slides"},
+    {"source_event_id":"normal-22","post_id":"demo-normal","comment_id":"n22","author":"normal-a22","occurred_at":"2026-08-21T12:31:30Z","text":"The reminder is helpful"},
+    {"source_event_id":"normal-23","post_id":"demo-normal","comment_id":"n23","author":"normal-a23","occurred_at":"2026-08-21T12:33:00Z","text":"I can help at the welcome desk"},
+    {"source_event_id":"normal-24","post_id":"demo-normal","comment_id":"n24","author":"normal-a24","occurred_at":"2026-08-21T12:34:30Z","text":"Please post the reading list"},
+    {"source_event_id":"normal-25","post_id":"demo-normal","comment_id":"n25","author":"normal-a25","occurred_at":"2026-08-21T12:36:00Z","text":"Glad to see this update"}
+  ]
+}
+

@@ -1,0 +1,10 @@
+{
+  "fixture_name":"single_review_comment",
+  "description":"One independently labelled safe placeholder; it is not evidence of coordination.",
+  "content_origin":"organizer-redacted-safe-placeholder",
+  "expected_outcome":{"coordination_alert":false,"high_priority":false},
+  "events":[
+    {"source_event_id":"single-01","post_id":"demo-single","comment_id":"s01","author":"single-a01","occurred_at":"2026-08-21T15:00:00Z","text":"[GNCI_REDACTED_CATEGORY]","manual_content_review_score":0.9}
+  ]
+}
+

@@ -1,0 +1,22 @@
+{
+  "fixture_name":"reply_thread_burst",
+  "description":"A top-level neutral placeholder followed by twelve concentrated synthetic replies.",
+  "content_origin":"synthetic-safe-placeholder",
+  "expected_outcome":{"coordination_alert":true,"high_priority":false},
+  "events":[
+    {"source_event_id":"thread-00","post_id":"demo-thread","comment_id":"parent-01","author":"thread-parent","occurred_at":"2026-08-21T16:00:00Z","text":"What should we discuss at the next meeting"},
+    {"source_event_id":"thread-01","post_id":"demo-thread","comment_id":"t01","parent_id":"parent-01","author":"thread-a01","occurred_at":"2026-08-21T16:00:05Z","text":"PATTERN_ALPHA discuss the schedule"},
+    {"source_event_id":"thread-02","post_id":"demo-thread","comment_id":"t02","parent_id":"parent-01","author":"thread-a02","occurred_at":"2026-08-21T16:00:10Z","text":"PATTERN_ALPHA discuss the schedule!"},
+    {"source_event_id":"thread-03","post_id":"demo-thread","comment_id":"t03","parent_id":"parent-01","author":"thread-a03","occurred_at":"2026-08-21T16:00:15Z","text":"PATTERN_ALPHA discuss our schedule"},
+    {"source_event_id":"thread-04","post_id":"demo-thread","comment_id":"t04","parent_id":"parent-01","author":"thread-a04","occurred_at":"2026-08-21T16:00:20Z","text":"PATTERN_ALPHA discuss the schedule"},
+    {"source_event_id":"thread-05","post_id":"demo-thread","comment_id":"t05","parent_id":"parent-01","author":"thread-a05","occurred_at":"2026-08-21T16:00:25Z","text":"PATTERN_ALPHA discuss the schedule!"},
+    {"source_event_id":"thread-06","post_id":"demo-thread","comment_id":"t06","parent_id":"parent-01","author":"thread-a06","occurred_at":"2026-08-21T16:00:30Z","text":"PATTERN_ALPHA discuss our schedule"},
+    {"source_event_id":"thread-07","post_id":"demo-thread","comment_id":"t07","parent_id":"parent-01","author":"thread-a07","occurred_at":"2026-08-21T16:00:35Z","text":"PATTERN_ALPHA discuss the schedule"},
+    {"source_event_id":"thread-08","post_id":"demo-thread","comment_id":"t08","parent_id":"parent-01","author":"thread-a08","occurred_at":"2026-08-21T16:00:40Z","text":"PATTERN_ALPHA discuss the schedule!"},
+    {"source_event_id":"thread-09","post_id":"demo-thread","comment_id":"t09","parent_id":"parent-01","author":"thread-a09","occurred_at":"2026-08-21T16:00:45Z","text":"PATTERN_ALPHA discuss our schedule"},
+    {"source_event_id":"thread-10","post_id":"demo-thread","comment_id":"t10","parent_id":"parent-01","author":"thread-a10","occurred_at":"2026-08-21T16:00:50Z","text":"PATTERN_ALPHA discuss the schedule"},
+    {"source_event_id":"thread-11","post_id":"demo-thread","comment_id":"t11","parent_id":"parent-01","author":"thread-a11","occurred_at":"2026-08-21T16:00:55Z","text":"PATTERN_ALPHA discuss the schedule!"},
+    {"source_event_id":"thread-12","post_id":"demo-thread","comment_id":"t12","parent_id":"parent-01","author":"thread-a12","occurred_at":"2026-08-21T16:01:00Z","text":"PATTERN_ALPHA discuss our schedule"}
+  ]
+}
+

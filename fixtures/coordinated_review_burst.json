@@ -1,0 +1,19 @@
+{
+  "fixture_name":"coordinated_review_burst",
+  "description":"A coordinated burst carrying an independent organizer-supplied review annotation.",
+  "content_origin":"organizer-redacted-safe-placeholder",
+  "expected_outcome":{"coordination_alert":true,"high_priority":true},
+  "events":[
+    {"source_event_id":"review-01","post_id":"demo-review","comment_id":"r01","author":"review-a01","occurred_at":"2026-08-21T14:00:00Z","text":"[GNCI_REDACTED_CATEGORY] PATTERN_BETA","manual_content_review_score":0.8},
+    {"source_event_id":"review-02","post_id":"demo-review","comment_id":"r02","author":"review-a02","occurred_at":"2026-08-21T14:00:05Z","text":"[GNCI_REDACTED_CATEGORY] PATTERN_BETA","manual_content_review_score":0.8},
+    {"source_event_id":"review-03","post_id":"demo-review","comment_id":"r03","author":"review-a03","occurred_at":"2026-08-21T14:00:10Z","text":"[GNCI_REDACTED_CATEGORY] PATTERN_BETA!","manual_content_review_score":0.8},
+    {"source_event_id":"review-04","post_id":"demo-review","comment_id":"r04","author":"review-a04","occurred_at":"2026-08-21T14:00:15Z","text":"[GNCI_REDACTED_CATEGORY] PATTERN_BETA","manual_content_review_score":0.8},
+    {"source_event_id":"review-05","post_id":"demo-review","comment_id":"r05","author":"review-a05","occurred_at":"2026-08-21T14:00:20Z","text":"[GNCI_REDACTED_CATEGORY] PATTERN_BETA","manual_content_review_score":0.8},
+    {"source_event_id":"review-06","post_id":"demo-review","comment_id":"r06","author":"review-a06","occurred_at":"2026-08-21T14:00:25Z","text":"[GNCI_REDACTED_CATEGORY] PATTERN_BETA!","manual_content_review_score":0.8},
+    {"source_event_id":"review-07","post_id":"demo-review","comment_id":"r07","author":"review-a07","occurred_at":"2026-08-21T14:00:30Z","text":"[GNCI_REDACTED_CATEGORY] PATTERN_BETA","manual_content_review_score":0.8},
+    {"source_event_id":"review-08","post_id":"demo-review","comment_id":"r08","author":"review-a08","occurred_at":"2026-08-21T14:00:35Z","text":"[GNCI_REDACTED_CATEGORY] PATTERN_BETA","manual_content_review_score":0.8},
+    {"source_event_id":"review-09","post_id":"demo-review","comment_id":"r09","author":"review-a09","occurred_at":"2026-08-21T14:00:40Z","text":"[GNCI_REDACTED_CATEGORY] PATTERN_BETA!","manual_content_review_score":0.8},
+    {"source_event_id":"review-10","post_id":"demo-review","comment_id":"r10","author":"review-a10","occurred_at":"2026-08-21T14:00:45Z","text":"[GNCI_REDACTED_CATEGORY] PATTERN_BETA","manual_content_review_score":0.8}
+  ]
+}
+
