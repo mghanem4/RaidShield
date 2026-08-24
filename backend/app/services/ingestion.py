@@ -10,6 +10,7 @@ from app.config import Settings
 from app.detection import calculate_features, confidence, explanations, score
 from app.models import Alert, AlertAudit, Event, Post, ReplayRun
 from app.schemas import NormalizedInput
+from app.services.content_detector import ContentDetector, configured_detector
 from app.services.crypto import (
     decrypt_text,
     encrypt_text,
@@ -30,9 +31,15 @@ def utc(value: datetime) -> datetime:
 
 
 class IngestionService:
-    def __init__(self, db: Session, settings: Settings):
+    def __init__(
+        self,
+        db: Session,
+        settings: Settings,
+        content_detector: ContentDetector | None = None,
+    ):
         self.db = db
         self.settings = settings
+        self.content_detector = content_detector or configured_detector(settings)
 
     def ingest(self, item: NormalizedInput) -> tuple[Event, bool, Alert | None]:
         existing = self.db.scalar(
@@ -59,6 +66,37 @@ class IngestionService:
             if not self.settings.data_encryption_key:
                 raise ValueError("Raw text storage is enabled but no encryption key is configured")
             encrypted = encrypt_text(item.text, self.settings.data_encryption_key)
+        event_metadata = dict(item.metadata)
+        detector_eligible = (
+            item.source == "offline" or item.metadata.get("content_detector_eligible") is True
+        )
+        if self.content_detector and detector_eligible:
+            try:
+                signal = self.content_detector.analyze(item.text)
+                if signal:
+                    event_metadata["experimental_content_signal"] = signal.metadata()
+            except Exception:  # The optional detector must never block ingestion.
+                event_metadata["experimental_content_signal"] = {
+                    "source": "experimental_local_model",
+                    "status": "unavailable",
+                    "reason": "local_detector_inference_failed",
+                }
+            context_analyzer = getattr(self.content_detector, "analyze_context", None)
+            if item.context_parent_text and callable(context_analyzer):
+                reply_context = dict(event_metadata.get("reply_context") or {})
+                try:
+                    context_signal = context_analyzer(item.context_parent_text, item.text)
+                    if context_signal:
+                        semantic_metadata = context_signal.metadata()
+                        reply_context["semantic_model"] = semantic_metadata
+                        reply_context["current"] = semantic_metadata
+                except Exception:
+                    reply_context["semantic_model"] = {
+                        "source": "experimental_local_context_model",
+                        "status": "unavailable",
+                        "reason": "local_context_inference_failed",
+                    }
+                event_metadata["reply_context"] = reply_context
         event = Event(
             source=item.source,
             source_event_id=item.source_event_id,
@@ -71,7 +109,7 @@ class IngestionService:
             encrypted_text=encrypted,
             text_fingerprint=fingerprint(item.text),
             manual_content_review_score=item.manual_content_review_score,
-            event_metadata=item.metadata,
+            event_metadata=event_metadata,
         )
         self.db.add(event)
         post.last_event_at = max(utc(post.last_event_at), utc(item.occurred_at))
@@ -138,12 +176,49 @@ class IngestionService:
         coordination = score(features)
         if coordination < self.settings.alert_threshold:
             return None
-        content_scores = [
+        manual_scores = [
             e.manual_content_review_score
             for e in events
             if e.manual_content_review_score is not None
         ]
-        content_score = max(content_scores) if content_scores else None
+        detector_signals = [
+            signal
+            for event in events
+            if isinstance(event.event_metadata, dict)
+            and isinstance(signal := event.event_metadata.get("experimental_content_signal"), dict)
+            and isinstance(signal.get("score"), (int, float))
+        ]
+        strongest_signal = (
+            max(detector_signals, key=lambda item: float(item["score"]))
+            if detector_signals
+            else None
+        )
+        if manual_scores:
+            content_score = max(manual_scores)
+            evidence: dict[str, object] | None = {
+                "current": {
+                    "source": "organizer_annotation",
+                    "score": content_score,
+                    "status": "review_required" if content_score >= 0.5 else "no_concern",
+                },
+                "experimental_local_model": strongest_signal,
+            }
+        elif strongest_signal and strongest_signal.get("requires_review") is True:
+            content_score = float(strongest_signal["score"])
+            evidence = {
+                "current": strongest_signal,
+                "experimental_local_model": strongest_signal,
+            }
+        else:
+            content_score = None
+            evidence = (
+                {
+                    "current": None,
+                    "experimental_local_model": strongest_signal,
+                }
+                if strongest_signal
+                else None
+            )
         priority = "high" if content_score is not None and content_score >= 0.5 else "medium"
         existing = self.db.scalar(
             select(Alert)
@@ -163,11 +238,27 @@ class IngestionService:
         reasons = explanations(features)
         event_ids = [event.id for event in events]
         if existing:
+            if existing.reviews:
+                latest_review = max(existing.reviews, key=lambda review: review.reviewed_at)
+                content_score = latest_review.score
+                priority = "high" if content_score >= 0.5 else "medium"
+                evidence = {
+                    "current": {
+                        "source": "human_review",
+                        "score": latest_review.score,
+                        "category": latest_review.category,
+                        "status": (
+                            "review_required" if latest_review.score >= 0.5 else "no_concern"
+                        ),
+                    },
+                    "experimental_local_model": strongest_signal,
+                }
             old_score = existing.coordination_score
             existing.window_start = min(utc(existing.window_start), window_start)
             existing.window_end = window_end
             existing.coordination_score = coordination
             existing.content_review_score = content_score
+            existing.content_review_evidence = evidence
             existing.priority = priority
             existing.confidence = confidence(features)
             existing.features, existing.explanations, existing.event_ids = (
@@ -194,6 +285,7 @@ class IngestionService:
             window_end=window_end,
             coordination_score=coordination,
             content_review_score=content_score,
+            content_review_evidence=evidence,
             priority=priority,
             confidence=confidence(features),
             features=values,

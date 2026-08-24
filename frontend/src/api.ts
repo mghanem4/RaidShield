@@ -1,7 +1,9 @@
 import type {
   Alert,
+  CoordinationGraphData,
   Fixture,
   Health,
+  OfflineImport,
   Post,
   Replay,
   ThreadEvent,
@@ -20,15 +22,19 @@ const auth = (token: string) => ({
   Authorization: `Bearer ${token}`,
   "Content-Type": "application/json",
 });
+const bearer = (token: string) => ({ Authorization: `Bearer ${token}` });
 export const api = {
   health: () => json<Health>("/api/v1/health"),
   posts: () => json<Post[]>("/api/v1/posts"),
   post: (id: string) => json<Post>(`/api/v1/posts/${id}`),
+  coordinationGraph: (id: string) =>
+    json<CoordinationGraphData>(`/api/v1/posts/${id}/coordination-graph`),
   alerts: () => json<Alert[]>("/api/v1/alerts"),
   alert: (id: string) => json<Alert>(`/api/v1/alerts/${id}`),
-  threads: (id: string) =>
+  threads: (id: string, token = "") =>
     json<{ threads: ThreadEvent[]; unknown_parent_replies: ThreadEvent[] }>(
-      `/api/v1/posts/${id}/threads`,
+      `/api/v1/posts/${id}/threads${token ? "?include_content=true" : ""}`,
+      token ? { headers: auth(token) } : undefined,
     ),
   fixtures: () => json<Fixture[]>("/api/v1/fixtures"),
   replay: (fixture: string, token: string, reset = true) =>
@@ -37,6 +43,14 @@ export const api = {
       headers: auth(token),
       body: JSON.stringify({ fixture, speed: 0, reset_before_replay: reset }),
     }),
+  importOffline: (file: File, token: string, reset = false) => {
+    const body = new FormData();
+    body.append("file", file);
+    return json<OfflineImport>(
+      `/api/v1/offline/import?reset_before_import=${reset}`,
+      { method: "POST", headers: bearer(token), body },
+    );
+  },
   resolve: (id: string, token: string, resolution: string) =>
     json<Alert>(`/api/v1/alerts/${id}`, {
       method: "PATCH",
@@ -46,6 +60,16 @@ export const api = {
         resolution,
         reviewer_note: "Reviewed in the local moderator dashboard.",
       }),
+    }),
+  reviewContent: (
+    id: string,
+    token: string,
+    review: { score: number; category: string; reviewer_note: string },
+  ) =>
+    json<Alert>(`/api/v1/alerts/${id}/content-review`, {
+      method: "POST",
+      headers: auth(token),
+      body: JSON.stringify(review),
     }),
   export: async (id: string, token: string) => {
     const response = await fetch(`/api/v1/alerts/${id}/export`, {

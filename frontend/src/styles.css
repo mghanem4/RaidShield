@@ -420,6 +420,138 @@ button:disabled {
 .replies > div {
   padding: 0.55rem 1rem;
 }
+.reply-context {
+  margin-top: 0.45rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f7faf7;
+  padding: 0.55rem 0.7rem;
+}
+.reply-context summary {
+  color: var(--teal);
+  cursor: pointer;
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+.reply-context dl {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 1rem;
+  margin: 0.55rem 0;
+}
+.reply-context dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--line);
+  padding: 0.35rem 0;
+  font-size: 0.72rem;
+}
+.reply-context dt {
+  color: var(--muted);
+}
+.reply-context dd {
+  margin: 0;
+  font-weight: 700;
+}
+.reply-context p {
+  margin: 0.45rem 0 0;
+  font-size: 0.72rem;
+}
+.content-evidence {
+  margin-top: 0.55rem;
+  border: 1px solid #b9d2ca;
+  border-radius: 10px;
+  background: #f6faf8;
+  overflow: hidden;
+}
+.content-evidence.flagged {
+  border-color: #d7b06d;
+  background: #fffaf0;
+}
+.content-evidence summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  cursor: pointer;
+  padding: 0.7rem 0.8rem;
+  color: var(--teal);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.content-evidence.flagged summary {
+  color: #77551f;
+}
+.content-evidence-body {
+  border-top: 1px solid var(--line);
+  padding: 0.85rem;
+}
+.thread .content-evidence-body .calculation-summary {
+  margin: 0 0 0.8rem;
+  color: var(--ink);
+  font-weight: 650;
+}
+.evaluated-context {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 0.7rem;
+}
+.evaluated-context section,
+.ranking-list {
+  margin: 0.7rem 0;
+}
+.evaluated-context h4,
+.ranking-list h4 {
+  margin: 0 0 0.35rem;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.evaluated-context blockquote {
+  margin: 0;
+  padding: 0.65rem;
+  border-left: 3px solid #b9d2ca;
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+.ranking-list .score {
+  margin-top: 0.5rem;
+}
+.thread .content-evidence-body .repetition-evidence,
+.thread .content-evidence-body .model-provenance {
+  margin-top: 0.7rem;
+  font-size: 0.72rem;
+}
+.thread .content-evidence-body .repetition-evidence {
+  color: var(--ink);
+}
+.semantic-context-evidence {
+  margin-top: 0.5rem;
+  border: 1px solid #c7c5df;
+  border-radius: 9px;
+  background: #f8f7fc;
+  padding: 0.6rem 0.75rem;
+}
+.semantic-context-evidence summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.7rem;
+  cursor: pointer;
+  color: #55517b;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+.thread .semantic-context-evidence > div > p {
+  margin-top: 0.65rem;
+  font-size: 0.74rem;
+}
+.thread .semantic-context-unavailable {
+  margin-top: 0.5rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
 .detail-grid {
   display: grid;
   grid-template-columns: 1.4fr 1fr;
@@ -457,6 +589,241 @@ button:disabled {
 }
 .review {
   margin-top: 3rem;
+}
+.model-signal {
+  border-left: 4px solid var(--teal);
+}
+.graph-panel {
+  margin: 1rem 0 2rem;
+  padding: 1.2rem;
+}
+.graph-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1.5rem;
+}
+.graph-heading h2 {
+  margin-bottom: 0.35rem;
+}
+.graph-heading p:not(.eyebrow) {
+  margin: 0;
+  color: var(--muted);
+}
+.graph-summary {
+  display: flex;
+  gap: 1rem;
+  flex-shrink: 0;
+}
+.graph-summary span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  text-align: center;
+}
+.graph-summary strong {
+  display: block;
+  color: var(--ink);
+  font-size: 1.3rem;
+}
+.graph-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.graph-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 1rem;
+}
+.graph-toolbar button {
+  padding: 0.45rem 0.65rem;
+  font-size: 0.78rem;
+}
+.graph-toolbar .icon-button {
+  width: 2rem;
+  padding-inline: 0;
+  font-size: 1rem;
+}
+.graph-toolbar output {
+  width: 3.1rem;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+.graph-toolbar > span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  margin-left: auto;
+}
+.graph-canvas {
+  min-width: 0;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at center, #edf5f1 0, transparent 65%), #fff;
+  cursor: grab;
+  user-select: none;
+}
+.graph-canvas.canvas {
+  cursor: grabbing;
+}
+.graph-canvas svg {
+  display: block;
+  width: 100%;
+  min-width: 580px;
+  height: auto;
+  touch-action: none;
+}
+.graph-edges line {
+  stroke: #a9bbb5;
+  opacity: 0.42;
+  transition: opacity 0.15s;
+}
+.graph-edges line.selected {
+  stroke: var(--amber);
+  opacity: 0.92;
+}
+.graph-nodes g {
+  cursor: move;
+  outline: none;
+}
+.graph-nodes circle {
+  stroke: white;
+  stroke-width: 3;
+  filter: drop-shadow(0 2px 3px #17332f25);
+  transition:
+    stroke 0.15s,
+    stroke-width 0.15s;
+}
+.graph-nodes g:hover circle,
+.graph-nodes g:focus circle,
+.graph-nodes g.selected circle {
+  stroke: var(--amber);
+  stroke-width: 5;
+}
+.graph-nodes .pin-dot {
+  fill: #f0b84d;
+  stroke: white;
+  stroke-width: 1.5;
+  pointer-events: none;
+}
+.graph-nodes text {
+  fill: var(--ink);
+  font-size: 11px;
+  font-weight: 700;
+  pointer-events: none;
+}
+.graph-inspector {
+  background: var(--soft);
+  border-radius: 12px;
+  padding: 1rem;
+}
+.graph-inspector h3 {
+  margin: 0.8rem 0 0.5rem;
+}
+.graph-pin-status {
+  color: var(--muted);
+  font-size: 0.74rem;
+  margin: -0.2rem 0 0.5rem;
+}
+.graph-inspector dl {
+  margin: 0;
+}
+.graph-inspector dl div {
+  padding: 0.4rem 0;
+}
+.graph-inspector h4 {
+  margin-bottom: 0.6rem;
+}
+.graph-inspector ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.65rem;
+}
+.graph-inspector li {
+  border-top: 1px solid #c8dbd3;
+  padding-top: 0.6rem;
+}
+.graph-inspector li strong,
+.graph-inspector li span {
+  display: block;
+}
+.graph-context-summary {
+  border-top: 1px solid #c8dbd3;
+  margin-top: 0.8rem;
+}
+.graph-context-summary h4 {
+  margin-top: 0.8rem;
+}
+.graph-context-summary li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  text-transform: capitalize;
+}
+.graph-inspector li span {
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  margin-top: 0.15rem;
+}
+.graph-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  color: var(--muted);
+  font-size: 0.76rem;
+  margin-top: 0.85rem;
+}
+.graph-legend i {
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 0.3rem;
+}
+.graph-legend i.cluster {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--teal);
+}
+.graph-legend i.edge {
+  width: 18px;
+  height: 3px;
+  background: #899e97;
+}
+.graph-legend i.pin {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #f0b84d;
+  border: 1px solid white;
+  box-shadow: 0 0 0 1px #d49a30;
+}
+.signal-breakdown {
+  margin-top: 1rem;
+}
+.content-review-form {
+  display: grid;
+  grid-template-columns: 0.9fr 1.1fr;
+  gap: 2rem;
+  margin-top: 2rem;
+}
+.content-review-form label {
+  display: grid;
+  gap: 0.45rem;
+  margin-bottom: 1rem;
+  font-weight: 700;
+}
+.content-review-form input[type="range"] {
+  padding: 0;
+  accent-color: var(--teal);
 }
 .actions {
   display: flex;
@@ -553,6 +920,9 @@ a:focus {
     padding: 1rem;
     gap: 1rem;
   }
+  .content-review-form {
+    grid-template-columns: 1fr;
+  }
   .brand small {
     display: none;
   }
@@ -574,8 +944,20 @@ a:focus {
   }
   .grid,
   .detail-grid,
-  .lab {
+  .lab,
+  .graph-layout {
     grid-template-columns: 1fr;
+  }
+  .graph-heading {
+    flex-direction: column;
+  }
+  .graph-summary {
+    width: 100%;
+    justify-content: space-around;
+  }
+  .graph-toolbar > span {
+    width: 100%;
+    margin-left: 0;
   }
   .features {
     grid-template-columns: 1fr 1fr;

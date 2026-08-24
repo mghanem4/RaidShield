@@ -1,11 +1,25 @@
 SHELL := /bin/sh
 
-.PHONY: setup keys migrate backend frontend dev test lint format typecheck build e2e demo clean
+.PHONY: setup content-model content-smoke semantic-model semantic-smoke keys migrate backend frontend dev test lint format typecheck build e2e demo clean
 
 setup:
 	python3 -m venv .venv
 	.venv/bin/pip install -e 'backend[dev]'
 	cd frontend && npm install
+
+content-model:
+	.venv/bin/pip install -e 'backend[content-ai]'
+	cd backend && ../.venv/bin/python scripts/cache_content_model.py
+
+content-smoke:
+	cd backend && ../.venv/bin/python scripts/smoke_content_model.py
+
+semantic-model:
+	.venv/bin/pip install -e 'backend[content-ai]'
+	cd backend && ../.venv/bin/python scripts/cache_semantic_model.py
+
+semantic-smoke:
+	cd backend && ../.venv/bin/python scripts/smoke_semantic_model.py
 
 keys:
 	@echo "PSEUDONYMIZATION_KEY=$$(openssl rand -hex 32)"
@@ -54,4 +68,3 @@ demo:
 
 clean:
 	@echo "Use the Settings > Safety UI or authenticated DELETE /api/v1/admin/data for recoverability and explicit confirmation."
-

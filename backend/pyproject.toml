@@ -22,6 +22,12 @@ dev = [
   "ruff>=0.6,<1",
   "mypy>=1.11,<2",
 ]
+content-ai = [
+  "torch>=2.4,<3",
+  "transformers>=4.46,<6",
+  "sentencepiece>=0.2,<0.3",
+  "safetensors>=0.4,<1",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

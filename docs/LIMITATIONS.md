@@ -1,12 +1,21 @@
 # Known limitations
 
-- Live Instagram webhook delivery is not verified without owner-controlled credentials and an authorized professional account. Only signed safe samples are tested.
-- The Instagram adapter intentionally covers the documented comment-style payload shape used in tests; Meta product/version variants must be validated during owner testing.
+- The MVP accepts authorized offline JSON only. It does not collect, scrape, poll, or subscribe to any social platform.
+- Imported datasets are limited to 5 MB and 1,000 events per request and must match the documented schema.
 - SQLite, one local admin token, and in-process background tasks are local-MVP choices, not public deployment architecture.
 - With raw-text storage disabled, near-duplicate analysis uses a bounded in-process transient cache. A process restart discards that cache, as intended; historical similarity cannot be recomputed from fingerprints alone.
+- Reply context must be calculated during batch loading because parent/reply plaintext is discarded by default. Existing records cannot receive new semantic context after restart unless authorized source data is re-imported.
+- Structural context detects repetition and conversation position; it cannot determine agreement or counterspeech. The optional zero-shot parent–reply relationship ranking is uncalibrated, can confuse quotation or sarcasm, and always requires human interpretation.
 - Confidence is data-sufficiency language. The MVP does not yet require persistence across two adjacent windows for “high”; this conservative production refinement is deferred.
 - No cross-post overlap feature is included. It was optional and deferred until core outcomes are stable.
+- Optional graph semantic edges use an uncalibrated multilingual embedding ranking computed transiently from parent/comment context. Common reactions, quotation, counterspeech, sarcasm, translation artifacts, and popular phrases can create misleading similarity. The graph remains post-scoped and does not connect identities across datasets.
+- Graph construction is pairwise and displays 100 participants by default (maximum 200 through the API). Larger imported populations are explicitly reported as truncated.
+- Dragged positions, pins, pan, and zoom are session-view state and reset on refresh. They are intentionally not synchronized across browsers or included in evidence exports.
 - No rate limiter or pagination cursor is implemented. List endpoints are capped; the two-minute detector remains bounded.
-- The app cannot see direct messages, private activity, deleted events it never received, or activity outside an authorized comment surface.
+- The app cannot see or verify anything outside the imported dataset. Dataset provenance and authorization remain the operator's responsibility.
 - Coordination indicators can flag benign campaigns. They do not establish intent, harm, a policy violation, or a legal conclusion.
-
+- A graph cluster means participants are connected by the configured observable indicators. It does not establish that participants are bots, controlled by one actor, or knowingly coordinated.
+- The optional local zero-shot detector is uncalibrated and disabled by default. Its model-card XNLI result does not validate insults, anti-Muslim hostility, Arabic dialects, Arabizi, or code-switching. Its scores are review-ranking signals rather than probabilities, and human correction is required.
+- Per-comment calculation summaries are deterministic descriptions of label rankings and threshold comparisons, not causal explanations, token attribution, or access to the model's internal reasoning. Repetition counts provide observable context but cannot explain why a neural model assigned a score.
+- Local inference reduces network disclosure but does not eliminate risks from model dependencies, local swap, crash reports, backups, or access to the workstation.
+- Semantic comparison is quadratic within each imported post before graph caps apply. The 1,000-event import bound limits the MVP, but production scale requires approximate-neighbor search, batching limits, queues, and resource controls.

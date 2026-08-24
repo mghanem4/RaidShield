@@ -2,26 +2,37 @@ from __future__ import annotations
 
 import asyncio
 import hmac
-import json
 from datetime import datetime, timezone
 from typing import Annotated, Any
 
-from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException, Query, Request
+from fastapi import (
+    BackgroundTasks,
+    Depends,
+    FastAPI,
+    File,
+    Header,
+    HTTPException,
+    Query,
+    Request,
+    UploadFile,
+)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.adapters.instagram import InstagramWebhookAdapter, verify_signature
+from app.adapters.offline import MAX_OFFLINE_BYTES, OfflineDatasetAdapter, OfflineDatasetError
 from app.adapters.replay import ReplayAdapter
 from app.config import Settings, get_settings
 from app.db import SessionLocal, get_db
 from app.models import Alert, ContentReview, DetectionSetting, Event, Post, ReplayRun
 from app.schemas import AlertPatch, ReplayRequest, ReviewRequest, SettingsUpdate
+from app.services.coordination_graph import build_coordination_graph
 from app.services.crypto import decrypt_text, display_pseudonym
 from app.services.evidence import build_evidence_zip
 from app.services.ingestion import IngestionService, purge_all
 from app.services.retention import purge_expired
+from app.services.semantic_context import prepare_semantic_context
 
 app = FastAPI(title="RaidShield API", version="0.1.0")
 settings = get_settings()
@@ -75,6 +86,7 @@ def serialize_alert(alert: Alert) -> dict[str, Any]:
         "window_end": alert.window_end,
         "coordination_score": alert.coordination_score,
         "content_review_score": alert.content_review_score,
+        "content_review_evidence": alert.content_review_evidence,
         "priority": alert.priority,
         "confidence": alert.confidence,
         "features": alert.features,
@@ -86,6 +98,77 @@ def serialize_alert(alert: Alert) -> dict[str, Any]:
     }
 
 
+def public_content_signal(event: Event) -> dict[str, Any] | None:
+    if not isinstance(event.event_metadata, dict):
+        return None
+    signal = event.event_metadata.get("experimental_content_signal")
+    if not isinstance(signal, dict):
+        return None
+    allowed = {
+        "source",
+        "status",
+        "score",
+        "category",
+        "requires_review",
+        "context_score",
+        "model_id",
+        "model_revision",
+        "threshold",
+        "reason",
+    }
+    result = {key: signal[key] for key in allowed if key in signal}
+    label_scores = signal.get("label_scores")
+    if isinstance(label_scores, dict):
+        result["label_scores"] = {
+            str(label)[:80]: float(value)
+            for label, value in list(label_scores.items())[:20]
+            if isinstance(value, (int, float))
+        }
+    return result
+
+
+def public_semantic_context(event: Event) -> dict[str, Any] | None:
+    if not isinstance(event.event_metadata, dict):
+        return None
+    context = event.event_metadata.get("semantic_context")
+    if not isinstance(context, dict):
+        return None
+    allowed = {
+        "source",
+        "status",
+        "model_id",
+        "model_revision",
+        "threshold",
+        "time_window_seconds",
+        "neighbor_count",
+        "reason",
+    }
+    result = {key: context[key] for key in allowed if key in context}
+    neighbors = context.get("neighbors")
+    if isinstance(neighbors, list):
+        safe_neighbors = [item for item in neighbors if isinstance(item, dict)]
+        similarities = [
+            float(item["similarity"])
+            for item in safe_neighbors
+            if isinstance(item.get("similarity"), (int, float))
+        ]
+        timings = [
+            float(item["seconds_apart"])
+            for item in safe_neighbors
+            if isinstance(item.get("seconds_apart"), (int, float))
+        ]
+        result.update(
+            {
+                "strongest_similarity": max(similarities, default=0.0),
+                "closest_timing_seconds": min(timings, default=None),
+                "shared_parent_match_count": sum(
+                    item.get("shared_parent") is True for item in safe_neighbors
+                ),
+            }
+        )
+    return result
+
+
 @app.get("/api/v1/health")
 def health(
     db: Session = Depends(get_db), config: Settings = Depends(get_settings)
@@ -95,14 +178,63 @@ def health(
         db.execute(select(1))
     except Exception:
         ready = False
-    configured = bool(config.meta_verify_token and config.meta_app_secret)
     return {
         "status": "ok" if ready else "degraded",
         "database_ready": ready,
-        "mode": "instagram" if configured else "replay",
-        "meta_configured": configured,
+        "mode": "offline",
+        "offline_import_ready": ready,
         "raw_text_storage": config.store_raw_text,
+        "content_detector_enabled": config.content_detector_enabled,
+        "content_detector_model": (
+            config.content_detector_model if config.content_detector_enabled else None
+        ),
+        "semantic_context_enabled": config.semantic_context_enabled,
+        "semantic_context_model": (
+            config.semantic_context_model if config.semantic_context_enabled else None
+        ),
         "version": "0.1.0",
+    }
+
+
+@app.post("/api/v1/offline/import", dependencies=[Depends(admin)])
+async def import_offline_dataset(
+    file: UploadFile = File(...),
+    reset_before_import: bool = Query(False),
+    db: Session = Depends(get_db),
+    config: Settings = Depends(get_settings),
+) -> dict[str, Any]:
+    if file.filename and not file.filename.lower().endswith(".json"):
+        raise HTTPException(415, "Offline dataset must be a JSON file")
+    try:
+        raw = await file.read(MAX_OFFLINE_BYTES + 1)
+    finally:
+        await file.close()
+    try:
+        metadata, events = OfflineDatasetAdapter().load_bytes(raw)
+    except OfflineDatasetError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    events = prepare_semantic_context(events, config)
+
+    if reset_before_import:
+        purge_all(db)
+    service = IngestionService(db, config)
+    created_events = 0
+    duplicate_events = 0
+    post_ids: set[str] = set()
+    alert_ids: set[str] = set()
+    for item in events:
+        event, created, alert = service.ingest(item)
+        created_events += int(created)
+        duplicate_events += int(not created)
+        post_ids.add(event.post_id)
+        if alert:
+            alert_ids.add(alert.id)
+    return {
+        **metadata,
+        "created_events": created_events,
+        "duplicate_events": duplicate_events,
+        "result_post_ids": sorted(post_ids),
+        "result_alert_ids": sorted(alert_ids),
     }
 
 
@@ -115,6 +247,7 @@ def run_replay(replay_id: str, fixture: str, speed: float) -> None:
     config = get_settings()
     adapter = ReplayAdapter(config.fixture_dir)
     _, events = adapter.load(fixture)
+    events = prepare_semantic_context(events, config)
     with SessionLocal() as db:
         run = db.get(ReplayRun, replay_id)
         if not run:
@@ -229,6 +362,18 @@ def timeline(
     return [{"timestamp": key, "count": value} for key, value in sorted(buckets.items())][-minutes:]
 
 
+@app.get("/api/v1/posts/{post_id}/coordination-graph")
+def coordination_graph(
+    post_id: str, limit: int = Query(100, ge=2, le=200), db: Session = Depends(get_db)
+) -> dict[str, Any]:
+    if db.get(Post, post_id) is None:
+        raise HTTPException(404, "Post not found")
+    events = list(
+        db.scalars(select(Event).where(Event.post_id == post_id).order_by(Event.occurred_at))
+    )
+    return build_coordination_graph(events, max_participants=limit)
+
+
 @app.get("/api/v1/posts/{post_id}/threads")
 def threads(
     post_id: str,
@@ -257,6 +402,13 @@ def threads(
             "participant": display_pseudonym(event.author_pseudonym),
             "occurred_at": event.occurred_at,
             "content": content,
+            "content_signal": public_content_signal(event),
+            "semantic_context": public_semantic_context(event),
+            "reply_context": (
+                event.event_metadata.get("reply_context")
+                if isinstance(event.event_metadata, dict)
+                else None
+            ),
         }
 
     for event in events:
@@ -348,6 +500,18 @@ def add_review(
     )
     db.add(review)
     alert.content_review_score = request.score
+    prior_model = None
+    if alert.content_review_evidence:
+        prior_model = alert.content_review_evidence.get("experimental_local_model")
+    alert.content_review_evidence = {
+        "current": {
+            "source": "human_review",
+            "score": request.score,
+            "category": request.category,
+            "status": "review_required" if request.score >= 0.5 else "no_concern",
+        },
+        "experimental_local_model": prior_model,
+    }
     alert.priority = (
         "high"
         if alert.coordination_score >= settings.alert_threshold and request.score >= 0.5
@@ -358,12 +522,16 @@ def add_review(
 
 
 @app.post("/api/v1/alerts/{alert_id}/export", dependencies=[Depends(admin)])
-def export(alert_id: str, db: Session = Depends(get_db)) -> Response:
+def export(
+    alert_id: str,
+    db: Session = Depends(get_db),
+    config: Settings = Depends(get_settings),
+) -> Response:
     alert = db.get(Alert, alert_id)
     if not alert:
         raise HTTPException(404, "Alert not found")
     return Response(
-        build_evidence_zip(db, alert),
+        build_evidence_zip(db, alert, config.data_encryption_key if config.store_raw_text else ""),
         media_type="application/zip",
         headers={"Content-Disposition": f'attachment; filename="raidshield-{alert.id}.zip"'},
     )
@@ -425,45 +593,3 @@ def delete_data(confirmation: str = Query(...), db: Session = Depends(get_db)) -
     }
     purge_all(db)
     return counts
-
-
-@app.get("/webhooks/instagram")
-def verify_webhook(request: Request, config: Settings = Depends(get_settings)) -> Response:
-    token = request.query_params.get("hub.verify_token", "")
-    challenge = request.query_params.get("hub.challenge", "")
-    mode = request.query_params.get("hub.mode", "")
-    if (
-        mode == "subscribe"
-        and config.meta_verify_token
-        and hmac.compare_digest(token, config.meta_verify_token)
-    ):
-        return Response(challenge, media_type="text/plain")
-    raise HTTPException(403, "Webhook verification failed")
-
-
-@app.post("/webhooks/instagram")
-async def instagram_webhook(
-    request: Request,
-    background: BackgroundTasks,
-    signature: Annotated[str | None, Header(alias="X-Hub-Signature-256")] = None,
-    config: Settings = Depends(get_settings),
-) -> dict[str, int]:
-    body = await request.body()
-    if len(body) > 1_000_000:
-        raise HTTPException(413, "Webhook payload too large")
-    if not verify_signature(body, signature, config.meta_app_secret):
-        raise HTTPException(401, "Invalid webhook signature")
-    try:
-        payload = json.loads(body)
-    except json.JSONDecodeError as exc:
-        raise HTTPException(400, "Invalid JSON payload") from exc
-    events = InstagramWebhookAdapter().normalize(payload)
-
-    def process() -> None:
-        with SessionLocal() as db:
-            service = IngestionService(db, config)
-            for item in events:
-                service.ingest(item)
-
-    background.add_task(process)
-    return {"accepted": len(events)}

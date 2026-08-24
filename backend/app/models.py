@@ -58,6 +58,7 @@ class Alert(Base):
     window_end: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     coordination_score: Mapped[float] = mapped_column(Float)
     content_review_score: Mapped[float | None] = mapped_column(Float)
+    content_review_evidence: Mapped[dict[str, Any] | None] = mapped_column(JSON)
     priority: Mapped[str] = mapped_column(String(20))
     confidence: Mapped[str] = mapped_column(String(20))
     features: Mapped[dict[str, Any]] = mapped_column(JSON)

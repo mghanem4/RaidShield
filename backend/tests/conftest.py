@@ -7,9 +7,9 @@ os.environ.update(
         "PSEUDONYMIZATION_KEY": "test-installation-pseudonym-key",
         "DATA_ENCRYPTION_KEY": "_f7sGD0YkjbT0nLwrX_InpiMIM2VN0tEfMzM4eeibtg=",
         "DATABASE_URL": "sqlite:///./data/test.db",
-        "META_VERIFY_TOKEN": "verify-me",
-        "META_APP_SECRET": "meta-test-secret",
         "STORE_RAW_TEXT": "false",
+        "CONTENT_DETECTOR_ENABLED": "false",
+        "SEMANTIC_CONTEXT_ENABLED": "false",
     }
 )
 

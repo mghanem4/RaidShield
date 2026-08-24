@@ -1,0 +1,137 @@
+{
+  "dataset_name": "safe_bot_raid_demo",
+  "description": "Synthetic harmless bot-like reply burst for testing coordination indicators only",
+  "content_origin": "repository_safe_synthetic",
+  "events": [
+    {
+      "source_event_id": "safe-event-000",
+      "post_id": "safe-demo-post-001",
+      "comment_id": "safe-root-comment",
+      "parent_id": null,
+      "participant_id": "safe-participant-000",
+      "occurred_at": "2026-08-24T14:00:00Z",
+      "text": "SAFE DEMO: Community update discussion.",
+      "organizer_review_score": 0.0
+    },
+    {
+      "source_event_id": "safe-event-001",
+      "post_id": "safe-demo-post-001",
+      "comment_id": "safe-reply-001",
+      "parent_id": "safe-root-comment",
+      "participant_id": "safe-participant-001",
+      "occurred_at": "2026-08-24T14:00:02Z",
+      "text": "SAFE DEMO: Please review this community update.",
+      "organizer_review_score": 0.0
+    },
+    {
+      "source_event_id": "safe-event-002",
+      "post_id": "safe-demo-post-001",
+      "comment_id": "safe-reply-002",
+      "parent_id": "safe-root-comment",
+      "participant_id": "safe-participant-002",
+      "occurred_at": "2026-08-24T14:00:04Z",
+      "text": "SAFE DEMO: Please review this community update.",
+      "organizer_review_score": 0.0
+    },
+    {
+      "source_event_id": "safe-event-003",
+      "post_id": "safe-demo-post-001",
+      "comment_id": "safe-reply-003",
+      "parent_id": "safe-root-comment",
+      "participant_id": "safe-participant-003",
+      "occurred_at": "2026-08-24T14:00:06Z",
+      "text": "SAFE DEMO: Please review this community update.",
+      "organizer_review_score": 0.0
+    },
+    {
+      "source_event_id": "safe-event-004",
+      "post_id": "safe-demo-post-001",
+      "comment_id": "safe-reply-004",
+      "parent_id": "safe-root-comment",
+      "participant_id": "safe-participant-004",
+      "occurred_at": "2026-08-24T14:00:08Z",
+      "text": "SAFE DEMO: Please review this community update.",
+      "organizer_review_score": 0.0
+    },
+    {
+      "source_event_id": "safe-event-005",
+      "post_id": "safe-demo-post-001",
+      "comment_id": "safe-reply-005",
+      "parent_id": "safe-root-comment",
+      "participant_id": "safe-participant-005",
+      "occurred_at": "2026-08-24T14:00:10Z",
+      "text": "SAFE DEMO: Please review this community update.",
+      "organizer_review_score": 0.0
+    },
+    {
+      "source_event_id": "safe-event-006",
+      "post_id": "safe-demo-post-001",
+      "comment_id": "safe-reply-006",
+      "parent_id": "safe-root-comment",
+      "participant_id": "safe-participant-006",
+      "occurred_at": "2026-08-24T14:00:12Z",
+      "text": "SAFE DEMO: Please review this community update.",
+      "organizer_review_score": 0.0
+    },
+    {
+      "source_event_id": "safe-event-007",
+      "post_id": "safe-demo-post-001",
+      "comment_id": "safe-reply-007",
+      "parent_id": "safe-root-comment",
+      "participant_id": "safe-participant-007",
+      "occurred_at": "2026-08-24T14:00:14Z",
+      "text": "SAFE DEMO: Please review this community update.",
+      "organizer_review_score": 0.0
+    },
+    {
+      "source_event_id": "safe-event-008",
+      "post_id": "safe-demo-post-001",
+      "comment_id": "safe-reply-008",
+      "parent_id": "safe-root-comment",
+      "participant_id": "safe-participant-008",
+      "occurred_at": "2026-08-24T14:00:16Z",
+      "text": "SAFE DEMO: Please review this community update.",
+      "organizer_review_score": 0.0
+    },
+    {
+      "source_event_id": "safe-event-009",
+      "post_id": "safe-demo-post-001",
+      "comment_id": "safe-reply-009",
+      "parent_id": "safe-root-comment",
+      "participant_id": "safe-participant-009",
+      "occurred_at": "2026-08-24T14:00:18Z",
+      "text": "SAFE DEMO: Please review this community update.",
+      "organizer_review_score": 0.0
+    },
+    {
+      "source_event_id": "safe-event-010",
+      "post_id": "safe-demo-post-001",
+      "comment_id": "safe-reply-010",
+      "parent_id": "safe-root-comment",
+      "participant_id": "safe-participant-010",
+      "occurred_at": "2026-08-24T14:00:20Z",
+      "text": "SAFE DEMO: Please review this community update.",
+      "organizer_review_score": 0.0
+    },
+    {
+      "source_event_id": "safe-event-011",
+      "post_id": "safe-demo-post-001",
+      "comment_id": "safe-reply-011",
+      "parent_id": "safe-root-comment",
+      "participant_id": "safe-participant-011",
+      "occurred_at": "2026-08-24T14:00:22Z",
+      "text": "SAFE DEMO: Please review this community update.",
+      "organizer_review_score": 0.0
+    },
+    {
+      "source_event_id": "safe-event-012",
+      "post_id": "safe-demo-post-001",
+      "comment_id": "safe-reply-012",
+      "parent_id": "safe-root-comment",
+      "participant_id": "safe-participant-012",
+      "occurred_at": "2026-08-24T14:00:24Z",
+      "text": "SAFE DEMO: Please review this community update.",
+      "organizer_review_score": 0.0
+    }
+  ]
+}

@@ -1,35 +1,40 @@
 from __future__ import annotations
 
+import hashlib
 import math
 import statistics
 from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
-from typing import Protocol
+from typing import Any, Protocol
 
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 
 class DetectionEvent(Protocol):
+    source_event_id: str
     author_pseudonym: str
     occurred_at: datetime
     parent_id: str | None
+    event_metadata: dict[str, Any]
 
 
 @dataclass(frozen=True)
 class FeatureResult:
     burst: float
     similarity: float
+    semantic_context: float | None
     synchronization: float
     novelty: float
     concentration: float
     unique_authors: int
     event_count: int
     largest_similarity_cluster: int
+    largest_semantic_cluster: int
     largest_parent_thread: int
 
-    def dict(self) -> dict[str, float | int]:
+    def dict(self) -> dict[str, float | int | None]:
         return asdict(self)
 
 
@@ -62,6 +67,55 @@ def similarity_score(texts: list[str], threshold: float = 0.85) -> tuple[float, 
             clustered |= cluster
             largest = max(largest, len(cluster))
     return len(clustered) / len(texts), largest
+
+
+def semantic_context_score(events: Sequence[DetectionEvent]) -> tuple[float | None, int]:
+    contexts = [
+        event.event_metadata.get("semantic_context")
+        if isinstance(event.event_metadata, dict)
+        else None
+        for event in events
+    ]
+    if not any(
+        isinstance(context, dict) and context.get("status") == "evaluated" for context in contexts
+    ):
+        return None, 0
+
+    refs = {
+        hashlib.sha256(f"semantic-event:{event.source_event_id}".encode()).hexdigest(): index
+        for index, event in enumerate(events)
+    }
+    neighbors: dict[int, set[int]] = {index: set() for index in range(len(events))}
+    clustered: set[int] = set()
+    for index, context in enumerate(contexts):
+        if not isinstance(context, dict):
+            continue
+        matches = context.get("neighbors")
+        if not isinstance(matches, list):
+            continue
+        for match in matches:
+            if not isinstance(match, dict):
+                continue
+            other = refs.get(str(match.get("event_ref", "")))
+            if other is None or events[index].author_pseudonym == events[other].author_pseudonym:
+                continue
+            neighbors[index].add(other)
+            neighbors[other].add(index)
+            clustered.update((index, other))
+
+    largest = 0
+    unseen = set(clustered)
+    while unseen:
+        stack = [unseen.pop()]
+        size = 0
+        while stack:
+            current = stack.pop()
+            size += 1
+            discovered = neighbors[current] & unseen
+            unseen -= discovered
+            stack.extend(discovered)
+        largest = max(largest, size)
+    return len(clustered) / len(events) if events else 0.0, largest
 
 
 def synchronization_score(events: Sequence[DetectionEvent], reference_seconds: float = 30) -> float:
@@ -104,21 +158,34 @@ def calculate_features(
 ) -> FeatureResult:
     authors = {event.author_pseudonym for event in events}
     similarity, largest_cluster = similarity_score(texts, similarity_threshold)
+    semantic_context, largest_semantic_cluster = semantic_context_score(events)
     concentration, largest_thread = concentration_score(events)
     return FeatureResult(
         burst=burst_score(len(authors), cold_start_threshold),
         similarity=similarity,
+        semantic_context=semantic_context,
         synchronization=synchronization_score(events),
         novelty=novelty_score(authors, previously_seen),
         concentration=concentration,
         unique_authors=len(authors),
         event_count=len(events),
         largest_similarity_cluster=largest_cluster,
+        largest_semantic_cluster=largest_semantic_cluster,
         largest_parent_thread=largest_thread,
     )
 
 
 def score(features: FeatureResult) -> float:
+    if features.semantic_context is not None:
+        return round(
+            0.25 * features.burst
+            + 0.15 * features.similarity
+            + 0.20 * features.semantic_context
+            + 0.18 * features.synchronization
+            + 0.12 * features.novelty
+            + 0.10 * features.concentration,
+            4,
+        )
     return round(
         0.30 * features.burst
         + 0.25 * features.similarity
@@ -152,6 +219,12 @@ def explanations(features: FeatureResult, seconds: int = 120) -> list[str]:
     ]
     if features.similarity > 0:
         reasons.append(f"{features.similarity:.0%} of events belonged to near-duplicate clusters.")
+    if features.semantic_context is not None and features.semantic_context > 0:
+        reasons.append(
+            f"{features.semantic_context:.0%} of events had similar meaning and "
+            "conversation context "
+            "within the configured timing window."
+        )
     if features.novelty > 0:
         reasons.append(
             f"{features.novelty:.0%} of participants were first observed during the window."

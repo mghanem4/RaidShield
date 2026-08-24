@@ -3,11 +3,11 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class NormalizedInput(BaseModel):
-    source: Literal["instagram", "replay"]
+    source: Literal["offline", "replay"]
     source_event_id: str = Field(min_length=1, max_length=255)
     post_id: str = Field(min_length=1, max_length=255)
     comment_id: str = Field(min_length=1, max_length=255)
@@ -16,8 +16,38 @@ class NormalizedInput(BaseModel):
     occurred_at: datetime
     received_at: datetime
     text: str = Field(max_length=10000, exclude=True)
+    context_parent_text: str | None = Field(default=None, max_length=10000, exclude=True)
     manual_content_review_score: float | None = Field(default=None, ge=0, le=1)
     metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class OfflineDatasetEvent(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    source_event_id: str = Field(min_length=1, max_length=255)
+    post_id: str = Field(min_length=1, max_length=255)
+    comment_id: str = Field(min_length=1, max_length=255)
+    parent_id: str | None = Field(default=None, max_length=255)
+    participant_id: str = Field(min_length=1, max_length=255)
+    occurred_at: datetime
+    text: str = Field(min_length=1, max_length=10000)
+    organizer_review_score: float | None = Field(default=None, ge=0, le=1)
+
+    @field_validator("occurred_at")
+    @classmethod
+    def require_timezone(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("occurred_at must include a timezone")
+        return value
+
+
+class OfflineDataset(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    dataset_name: str = Field(pattern=r"^[a-z0-9][a-z0-9_-]{0,79}$")
+    description: str | None = Field(default=None, min_length=1, max_length=500)
+    content_origin: str = Field(pattern=r"^[a-z0-9][a-z0-9_-]{0,79}$")
+    events: list[OfflineDatasetEvent] = Field(min_length=1, max_length=1000)
 
 
 class ReplayRequest(BaseModel):

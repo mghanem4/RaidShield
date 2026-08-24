@@ -1,0 +1,47 @@
+{
+  "dataset_name": "safe-offline-demo",
+  "description": "Synthetic neutral reply-thread example",
+  "content_origin": "repository-safe-example",
+  "events": [
+    {
+      "source_event_id": "event-001",
+      "post_id": "post-001",
+      "comment_id": "comment-001",
+      "parent_id": null,
+      "participant_id": "participant-001",
+      "occurred_at": "2026-08-24T12:00:00Z",
+      "text": "SAFE_PLACEHOLDER opening discussion",
+      "organizer_review_score": null
+    },
+    {
+      "source_event_id": "event-002",
+      "post_id": "post-001",
+      "comment_id": "comment-002",
+      "parent_id": "comment-001",
+      "participant_id": "participant-002",
+      "occurred_at": "2026-08-24T12:00:02Z",
+      "text": "SAFE_PLACEHOLDER neutral reply alpha",
+      "organizer_review_score": null
+    },
+    {
+      "source_event_id": "event-003",
+      "post_id": "post-001",
+      "comment_id": "comment-003",
+      "parent_id": "comment-001",
+      "participant_id": "participant-003",
+      "occurred_at": "2026-08-24T12:00:04Z",
+      "text": "SAFE_PLACEHOLDER neutral reply beta",
+      "organizer_review_score": null
+    },
+    {
+      "source_event_id": "event-004",
+      "post_id": "post-001",
+      "comment_id": "comment-004",
+      "parent_id": "comment-001",
+      "participant_id": "participant-004",
+      "occurred_at": "2026-08-24T12:00:06Z",
+      "text": "SAFE_PLACEHOLDER neutral reply gamma",
+      "organizer_review_score": null
+    }
+  ]
+}

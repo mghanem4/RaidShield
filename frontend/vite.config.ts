@@ -5,7 +5,6 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": "http://127.0.0.1:8000",
-      "/webhooks": "http://127.0.0.1:8000",
     },
   },
   test: {

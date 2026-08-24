@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -10,6 +10,7 @@ from app.detection.engine import (
     concentration_score,
     novelty_score,
     score,
+    semantic_context_score,
     similarity_score,
     synchronization_score,
 )
@@ -20,6 +21,7 @@ from app.services.crypto import (
     normalize_text,
     pseudonymize,
 )
+from app.services.semantic_context import event_reference
 
 
 @dataclass
@@ -27,12 +29,14 @@ class E:
     author_pseudonym: str
     occurred_at: datetime
     parent_id: str | None = None
+    source_event_id: str = "event"
+    event_metadata: dict = field(default_factory=dict)
 
 
 def test_crypto_and_pseudonymization(settings):
-    one = pseudonymize("instagram", "raw-name", settings.pseudonymization_key)
-    assert one == pseudonymize("instagram", "raw-name", settings.pseudonymization_key)
-    assert one != pseudonymize("instagram", "raw-name", "another-key")
+    one = pseudonymize("offline", "raw-name", settings.pseudonymization_key)
+    assert one == pseudonymize("offline", "raw-name", settings.pseudonymization_key)
+    assert one != pseudonymize("offline", "raw-name", "another-key")
     encrypted = encrypt_text("private text", settings.data_encryption_key)
     assert "private text" not in encrypted
     assert decrypt_text(encrypted, settings.data_encryption_key) == "private text"
@@ -73,7 +77,19 @@ def test_concentration_and_formula():
     now = datetime.now(timezone.utc)
     events = [E("a", now, "parent"), E("b", now, "parent"), E("c", now, None)]
     assert concentration_score(events) == (pytest.approx(2 / 3), 2)
-    features = FeatureResult(0.8, 0.7, 0.6, 0.5, 0.4, 8, 8, 4, 5)
+    features = FeatureResult(
+        burst=0.8,
+        similarity=0.7,
+        semantic_context=None,
+        synchronization=0.6,
+        novelty=0.5,
+        concentration=0.4,
+        unique_authors=8,
+        event_count=8,
+        largest_similarity_cluster=4,
+        largest_semantic_cluster=0,
+        largest_parent_thread=5,
+    )
     assert score(features) == 0.65
 
 
@@ -85,3 +101,23 @@ def test_calculate_features_is_reproducible():
     assert first == calculate_features(events, texts, set())
     assert first.unique_authors == 6
     assert first.largest_parent_thread == 6
+
+
+def test_semantic_context_score_counts_cross_participant_matches():
+    now = datetime.now(timezone.utc)
+    left = E("a", now, "parent", "left")
+    right = E("b", now + timedelta(seconds=4), "parent", "right")
+    unrelated = E("c", now + timedelta(seconds=6), "parent", "unrelated")
+    left.event_metadata = {
+        "semantic_context": {
+            "status": "evaluated",
+            "neighbors": [{"event_ref": event_reference("right"), "similarity": 0.84}],
+        }
+    }
+    right.event_metadata = {"semantic_context": {"status": "evaluated", "neighbors": []}}
+    unrelated.event_metadata = {"semantic_context": {"status": "evaluated", "neighbors": []}}
+
+    value, largest = semantic_context_score([left, right, unrelated])
+
+    assert value == pytest.approx(2 / 3)
+    assert largest == 2

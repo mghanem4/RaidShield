@@ -10,7 +10,8 @@ import {
 } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "./api";
-import type { Alert, ThreadEvent } from "./types";
+import type { Alert, ContentSignal, ThreadEvent } from "./types";
+import CoordinationGraph from "./CoordinationGraph";
 
 const SafetyNotice = () => (
   <aside className="notice" aria-label="Safety notice">
@@ -73,19 +74,19 @@ function Dashboard() {
     <main>
       <div className="hero">
         <div>
-          <p className="eyebrow">Protected comment surface</p>
+          <p className="eyebrow">Offline review surface</p>
           <h1>Activity overview</h1>
           <p>
-            Explainable group-level indicators for a moderator-owned account.
+            Explainable group-level indicators from authorized local datasets.
           </p>
         </div>
         <div className="mode">
           <i className={health.data?.database_ready ? "online" : ""} />
           <span>{health.data?.mode ?? "checking"} mode</span>
           <small>
-            {health.data?.meta_configured
-              ? "Webhook configured"
-              : "Replay ready · Meta not configured"}
+            {health.data?.offline_import_ready
+              ? "Local JSON import ready"
+              : "Checking local import"}
           </small>
         </div>
       </div>
@@ -108,7 +109,7 @@ function Dashboard() {
           </strong>
         </article>
         <article>
-          <span>Protected posts</span>
+          <span>Imported posts</span>
           <strong>{items.length}</strong>
         </article>
         <article>
@@ -120,8 +121,8 @@ function Dashboard() {
       </section>
       <section className="section-head">
         <div>
-          <p className="eyebrow">Recent surfaces</p>
-          <h2>Monitored posts</h2>
+          <p className="eyebrow">Recent datasets</p>
+          <h2>Imported posts</h2>
         </div>
         <Link to="/test-lab">Run a safe replay →</Link>
       </section>
@@ -175,15 +176,15 @@ function AlertCard({ alert }: { alert: Alert }) {
     </Link>
   );
 }
-function PostPage() {
+function PostPage({ token }: { token: string }) {
   const { id = "" } = useParams();
   const post = useQuery({
     queryKey: ["post", id],
     queryFn: () => api.post(id),
   });
   const threads = useQuery({
-    queryKey: ["threads", id],
-    queryFn: () => api.threads(id),
+    queryKey: ["threads", id, Boolean(token)],
+    queryFn: () => api.threads(id, token),
   });
   if (post.error) return <ErrorBox error={post.error} />;
   if (!post.data)
@@ -223,6 +224,13 @@ function PostPage() {
       )}
       <section className="section-head">
         <div>
+          <p className="eyebrow">Explainable clusters</p>
+          <h2>Participant relationships</h2>
+        </div>
+      </section>
+      <CoordinationGraph postId={id} />
+      <section className="section-head">
+        <div>
           <p className="eyebrow">Reply relationships</p>
           <h2>Threads</h2>
         </div>
@@ -251,6 +259,8 @@ function ThreadList({
             <strong>{root.participant}</strong>
             <time>{new Date(root.occurred_at).toLocaleTimeString()}</time>
             <p>{root.content}</p>
+            <ContentEvidence event={root} />
+            <SemanticCoordinationEvidence event={root} />
           </div>
           <div
             className="replies"
@@ -261,6 +271,59 @@ function ThreadList({
                 <strong>{reply.participant}</strong>
                 <time>{new Date(reply.occurred_at).toLocaleTimeString()}</time>
                 <p>{reply.content}</p>
+                <ContentEvidence event={reply} parent={root} />
+                <SemanticCoordinationEvidence event={reply} />
+                {reply.reply_context && (
+                  <details className="reply-context">
+                    <summary>
+                      Context:{" "}
+                      {formatRelation(reply.reply_context.current.relation)}
+                    </summary>
+                    <dl>
+                      <div>
+                        <dt>Reply position</dt>
+                        <dd>
+                          {reply.reply_context.reply_position} of{" "}
+                          {reply.reply_context.sibling_count + 1}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>After parent</dt>
+                        <dd>
+                          {reply.reply_context.seconds_after_parent === null
+                            ? "Unknown"
+                            : `${reply.reply_context.seconds_after_parent}s`}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Exact sibling repeats</dt>
+                        <dd>
+                          {reply.reply_context.exact_duplicate_sibling_count}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Near sibling repeats</dt>
+                        <dd>
+                          {reply.reply_context.near_duplicate_sibling_count}
+                        </dd>
+                      </div>
+                    </dl>
+                    {reply.reply_context.current.source ===
+                      "experimental_local_context_model" && (
+                      <p>
+                        Experimental relationship ranking:{" "}
+                        {Math.round(
+                          (reply.reply_context.current.score ?? 0) * 100,
+                        )}
+                        %
+                      </p>
+                    )}
+                    <p className="hint">
+                      Context signals require human interpretation and do not
+                      prove agreement, intent, or authorship.
+                    </p>
+                  </details>
+                )}
               </div>
             ))}
           </div>
@@ -270,9 +333,13 @@ function ThreadList({
         <article className="thread">
           <h3>Unknown or unavailable parent</h3>
           {unknown.map((x) => (
-            <p key={x.id}>
-              {x.participant} · {x.content}
-            </p>
+            <div key={x.id}>
+              <p>
+                {x.participant} · {x.content}
+              </p>
+              <ContentEvidence event={x} />
+              <SemanticCoordinationEvidence event={x} />
+            </div>
           ))}
         </article>
       )}
@@ -280,21 +347,204 @@ function ThreadList({
   );
 }
 
+function formatRelation(relation?: string) {
+  if (!relation) return "not evaluated";
+  return relation.replaceAll("_", " ");
+}
+
+function signalExplanation(signal: ContentSignal) {
+  if (signal.status === "unavailable") {
+    return "The local model was unavailable, so no ranking was produced.";
+  }
+  const category = formatRelation(signal.category);
+  if (typeof signal.score !== "number") {
+    return "The comment was evaluated, but no usable ranking score was returned.";
+  }
+  const score = `${Math.round(signal.score * 100)}%`;
+  if (typeof signal.threshold !== "number") {
+    return `${category} was the highest-ranked review label at ${score}.`;
+  }
+  const threshold = `${Math.round(signal.threshold * 100)}%`;
+  return signal.requires_review
+    ? `Flagged for human review because ${category} was the highest-ranked label at ${score}, meeting the configured ${threshold} threshold.`
+    : `Evaluated but not flagged: ${category} was highest-ranked at ${score}, below the configured ${threshold} threshold.`;
+}
+
+function ContentEvidence({
+  event,
+  parent,
+}: {
+  event: ThreadEvent;
+  parent?: ThreadEvent;
+}) {
+  const signal = event.content_signal;
+  if (!signal) return null;
+  const rankings = Object.entries(signal.label_scores ?? {}).sort(
+    ([, left], [, right]) => right - left,
+  );
+  return (
+    <details
+      className={`content-evidence ${signal.requires_review ? "flagged" : ""}`}
+    >
+      <summary>
+        <span>
+          {signal.requires_review
+            ? "Flagged for human review"
+            : "Model review evidence"}
+        </span>
+        {typeof signal.score === "number" && (
+          <strong>{Math.round(signal.score * 100)}% ranking</strong>
+        )}
+      </summary>
+      <div className="content-evidence-body">
+        <p className="calculation-summary">{signalExplanation(signal)}</p>
+        <div className="evaluated-context">
+          <section>
+            <h4>Comment evaluated</h4>
+            <blockquote>{event.content}</blockquote>
+          </section>
+          {parent && (
+            <section>
+              <h4>Parent message</h4>
+              <blockquote>{parent.content}</blockquote>
+            </section>
+          )}
+        </div>
+        {rankings.length > 0 && (
+          <section className="ranking-list" aria-label="Model label rankings">
+            <h4>Complete label rankings</h4>
+            {rankings.map(([label, score]) => (
+              <Score
+                key={label}
+                label={`${formatRelation(label)} ranking`}
+                value={score}
+              />
+            ))}
+            {typeof signal.context_score === "number" && (
+              <Score
+                label="Context uncertainty ranking"
+                value={signal.context_score}
+              />
+            )}
+          </section>
+        )}
+        {event.reply_context && (
+          <p className="repetition-evidence">
+            Sibling comparison:{" "}
+            {event.reply_context.exact_duplicate_sibling_count} exact and{" "}
+            {event.reply_context.near_duplicate_sibling_count} near repetitions;
+            reply {event.reply_context.reply_position} of{" "}
+            {event.reply_context.sibling_count + 1}.
+          </p>
+        )}
+        <p className="hint">
+          This template describes the output comparison—not the model’s hidden
+          reasoning. Rankings are uncalibrated review aids, not probabilities or
+          determinations of hate, harm, intent, or a policy violation.
+        </p>
+        <p className="model-provenance">
+          Model: {signal.model_id ?? "local model"} · threshold{" "}
+          {typeof signal.threshold === "number"
+            ? `${Math.round(signal.threshold * 100)}%`
+            : "not available"}
+          {signal.model_revision
+            ? ` · revision ${signal.model_revision.slice(0, 10)}`
+            : ""}
+        </p>
+      </div>
+    </details>
+  );
+}
+
+function SemanticCoordinationEvidence({ event }: { event: ThreadEvent }) {
+  const evidence = event.semantic_context;
+  if (!evidence) return null;
+  if (evidence.status === "unavailable") {
+    return (
+      <p className="semantic-context-unavailable">
+        Semantic-context comparison unavailable for this import.
+      </p>
+    );
+  }
+  const matches = evidence.neighbor_count ?? 0;
+  return (
+    <details className="semantic-context-evidence">
+      <summary>
+        <span>
+          {matches
+            ? `${matches} semantic-context match${matches === 1 ? "" : "es"}`
+            : "No semantic-context matches"}
+        </span>
+        {matches > 0 && typeof evidence.strongest_similarity === "number" && (
+          <strong>
+            {Math.round(evidence.strongest_similarity * 100)}% ranking
+          </strong>
+        )}
+      </summary>
+      <div>
+        {matches > 0 ? (
+          <p>
+            Similar meaning and conversation context were observed with other
+            participants
+            {typeof evidence.closest_timing_seconds === "number"
+              ? ` as close as ${evidence.closest_timing_seconds} seconds apart`
+              : ""}
+            . {evidence.shared_parent_match_count ?? 0} match
+            {(evidence.shared_parent_match_count ?? 0) === 1 ? "" : "es"} shared
+            the same direct parent.
+          </p>
+        ) : (
+          <p>
+            No different-participant comment exceeded the configured semantic
+            threshold within the timing window and matching reply role.
+          </p>
+        )}
+        <p className="hint">
+          This experimental indicator can confuse common reactions,
+          counterspeech, quotation, or sarcasm. It requires corroborating timing
+          or thread evidence and human review.
+        </p>
+        <p className="model-provenance">
+          Model: {evidence.model_id ?? "local semantic model"} · threshold{" "}
+          {typeof evidence.threshold === "number"
+            ? `${Math.round(evidence.threshold * 100)}%`
+            : "not available"}
+          {evidence.model_revision
+            ? ` · revision ${evidence.model_revision.slice(0, 10)}`
+            : ""}
+        </p>
+      </div>
+    </details>
+  );
+}
+
 function AlertPage({ token }: { token: string }) {
   const { id = "" } = useParams();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const [reviewScore, setReviewScore] = useState(0.5);
+  const [reviewCategory, setReviewCategory] = useState("context_needed");
+  const [reviewerNote, setReviewerNote] = useState("");
   const alert = useQuery({
     queryKey: ["alert", id],
     queryFn: () => api.alert(id),
   });
   const threads = useQuery({
-    queryKey: ["alertThreads", alert.data?.post_id],
-    queryFn: () => api.threads(alert.data!.post_id),
+    queryKey: ["alertThreads", alert.data?.post_id, Boolean(token)],
+    queryFn: () => api.threads(alert.data!.post_id, token),
     enabled: !!alert.data,
   });
   const resolve = useMutation({
     mutationFn: (resolution: string) => api.resolve(id, token, resolution),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["alert", id] }),
+  });
+  const reviewContent = useMutation({
+    mutationFn: () =>
+      api.reviewContent(id, token, {
+        score: reviewScore,
+        category: reviewCategory,
+        reviewer_note: reviewerNote,
+      }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["alert", id] }),
   });
   if (alert.error) return <ErrorBox error={alert.error} />;
@@ -305,6 +555,17 @@ function AlertPage({ token }: { token: string }) {
       </main>
     );
   const a = alert.data;
+  const currentContentSource = a.content_review_evidence?.current?.source;
+  const experimentalSignal =
+    a.content_review_evidence?.experimental_local_model;
+  const contentLabel =
+    currentContentSource === "human_review"
+      ? "Human content review"
+      : currentContentSource === "organizer_annotation"
+        ? "Organizer content review"
+        : currentContentSource === "experimental_local_model"
+          ? "Experimental content signal"
+          : "Content review";
   const doExport = async () => {
     const blob = await api.export(id, token);
     const href = URL.createObjectURL(blob);
@@ -334,6 +595,7 @@ function AlertPage({ token }: { token: string }) {
         <span className={`pill ${a.priority}`}>{a.priority} priority</span>
       </div>
       <SafetyNotice />
+      <CoordinationGraph postId={a.post_id} />
       <div className="detail-grid">
         <section className="panel">
           <h2>Separate review signals</h2>
@@ -341,11 +603,11 @@ function AlertPage({ token }: { token: string }) {
           <p className="hint">
             Timing, duplication, novelty, and reply concentration.
           </p>
-          <Score
-            label="Human / organizer content review"
-            value={a.content_review_score}
-          />
-          <p className="hint">Independent of the coordination calculation.</p>
+          <Score label={contentLabel} value={a.content_review_score} />
+          <p className="hint">
+            Independent of the coordination calculation. Model output is a
+            triage score, not a probability or determination.
+          </p>
         </section>
         <section className="panel">
           <h2>Review status</h2>
@@ -368,6 +630,48 @@ function AlertPage({ token }: { token: string }) {
           </dl>
         </section>
       </div>
+      {experimentalSignal && (
+        <section className="panel model-signal">
+          <p className="eyebrow">Experimental local model</p>
+          <h2>Potential content-review need</h2>
+          <p>
+            This model can miss context or produce false alerts. It does not
+            identify hate, intent, a protected target, or a policy violation.
+          </p>
+          {typeof experimentalSignal.score === "number" && (
+            <Score
+              label={
+                experimentalSignal.category?.replaceAll("_", " ") ??
+                "Review signal"
+              }
+              value={experimentalSignal.score}
+            />
+          )}
+          {experimentalSignal.label_scores && (
+            <dl className="signal-breakdown">
+              {Object.entries(experimentalSignal.label_scores).map(
+                ([label, score]) => (
+                  <div key={label}>
+                    <dt>{label.replaceAll("_", " ")}</dt>
+                    <dd>{Math.round(score * 100)}%</dd>
+                  </div>
+                ),
+              )}
+              {typeof experimentalSignal.context_score === "number" && (
+                <div>
+                  <dt>Context uncertainty</dt>
+                  <dd>{Math.round(experimentalSignal.context_score * 100)}%</dd>
+                </div>
+              )}
+            </dl>
+          )}
+          <p className="hint">
+            Model: {experimentalSignal.model_id ?? "local model"} · pinned
+            revision{" "}
+            {experimentalSignal.model_revision?.slice(0, 10) ?? "unknown"}
+          </p>
+        </section>
+      )}
       <section className="panel">
         <h2>Why this was surfaced</h2>
         <ul className="reasons">
@@ -377,7 +681,7 @@ function AlertPage({ token }: { token: string }) {
         </ul>
         <div className="features">
           {Object.entries(a.features)
-            .filter(([, v]) => v <= 1)
+            .filter(([, value]) => value === null || value <= 1)
             .map(([key, value]) => (
               <Score key={key} label={key.replaceAll("_", " ")} value={value} />
             ))}
@@ -390,6 +694,68 @@ function AlertPage({ token }: { token: string }) {
         threads={threads.data?.threads ?? []}
         unknown={threads.data?.unknown_parent_replies}
       />
+      <section className="panel content-review-form">
+        <div>
+          <p className="eyebrow">Independent human assessment</p>
+          <h2>Review observed content</h2>
+          <p>
+            Consider context, quotation, counterspeech, criticism, and who or
+            what is being addressed. This assessment does not change the
+            coordination score.
+          </p>
+        </div>
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            reviewContent.mutate();
+          }}
+        >
+          <label>
+            Review category
+            <select
+              value={reviewCategory}
+              onChange={(event) => setReviewCategory(event.target.value)}
+            >
+              <option value="context_needed">Context needed</option>
+              <option value="needs_review">Needs review</option>
+              <option value="safety_concern">Safety concern</option>
+              <option value="no_concern">No concern</option>
+            </select>
+          </label>
+          <label>
+            Review score: {Math.round(reviewScore * 100)}%
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.05"
+              value={reviewScore}
+              onChange={(event) => setReviewScore(Number(event.target.value))}
+            />
+          </label>
+          <label>
+            Reviewer note
+            <input
+              value={reviewerNote}
+              maxLength={2000}
+              onChange={(event) => setReviewerNote(event.target.value)}
+              placeholder="Record context without adding identities"
+            />
+          </label>
+          <button disabled={!token || reviewContent.isPending}>
+            {reviewContent.isPending ? "Saving…" : "Save human content review"}
+          </button>
+          {reviewContent.isSuccess && (
+            <p role="status">Human content review saved.</p>
+          )}
+          {reviewContent.error && <ErrorBox error={reviewContent.error} />}
+          {!token && (
+            <p className="hint">
+              Enter the local administrator token in Test Lab before reviewing.
+            </p>
+          )}
+        </form>
+      </section>
       <section className="review panel">
         <div>
           <h2>Human resolution</h2>
@@ -432,11 +798,17 @@ function TestLab({
   const fixtures = useQuery({ queryKey: ["fixtures"], queryFn: api.fixtures });
   const qc = useQueryClient();
   const [selected, setSelected] = useState("reply_thread_burst");
+  const [offlineFile, setOfflineFile] = useState<File | null>(null);
+  const [resetOffline, setResetOffline] = useState(false);
   const replay = useMutation({
     mutationFn: () => api.replay(selected, token, true),
     onSuccess: () => {
       qc.invalidateQueries();
     },
+  });
+  const offlineImport = useMutation({
+    mutationFn: () => api.importOffline(offlineFile!, token, resetOffline),
+    onSuccess: () => qc.invalidateQueries(),
   });
   const active = fixtures.data?.find((f) => f.fixture_name === selected);
   return (
@@ -446,8 +818,8 @@ function TestLab({
           <p className="eyebrow">Safe demonstration</p>
           <h1>Test Lab</h1>
           <p>
-            Replay bundled synthetic events through the same normalized pipeline
-            used by webhooks.
+            Import an authorized local JSON dataset or replay bundled synthetic
+            events through the same normalized pipeline.
           </p>
         </div>
       </div>
@@ -500,6 +872,40 @@ function TestLab({
           </button>
           {replay.error && <ErrorBox error={replay.error} />}
         </section>
+        <section className="panel">
+          <p className="eyebrow">Offline data</p>
+          <h2>Import local JSON</h2>
+          <p>
+            The file is sent only to the localhost backend, validated in memory,
+            and never retained as an upload. Source identifiers are immediately
+            installation-hashed.
+          </p>
+          <label>
+            Offline JSON dataset
+            <input
+              type="file"
+              accept="application/json,.json"
+              onChange={(event) =>
+                setOfflineFile(event.target.files?.[0] ?? null)
+              }
+            />
+          </label>
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={resetOffline}
+              onChange={(event) => setResetOffline(event.target.checked)}
+            />{" "}
+            Delete existing local review data before import
+          </label>
+          <button
+            disabled={!token || !offlineFile || offlineImport.isPending}
+            onClick={() => offlineImport.mutate()}
+          >
+            {offlineImport.isPending ? "Importing…" : "Import offline dataset"}
+          </button>
+          {offlineImport.error && <ErrorBox error={offlineImport.error} />}
+        </section>
         {replay.data && (
           <section className="panel result" aria-live="polite">
             <span className="pill">{replay.data.status}</span>
@@ -508,7 +914,8 @@ function TestLab({
               events processed
             </h2>
             <p>
-              The fixture used keyed pseudonyms and retained no raw usernames.
+              The fixture used keyed pseudonyms and retained no raw participant
+              identifiers.
             </p>
             <div className="actions">
               {replay.data.result_alert_id && (
@@ -525,6 +932,37 @@ function TestLab({
                   to={`/posts/${replay.data.result_post_id}`}
                 >
                   Open post
+                </Link>
+              )}
+            </div>
+          </section>
+        )}
+        {offlineImport.data && (
+          <section className="panel result" aria-live="polite">
+            <span className="pill">offline import complete</span>
+            <h2>
+              {offlineImport.data.created_events} of{" "}
+              {offlineImport.data.total_events} events imported
+            </h2>
+            <p>
+              {offlineImport.data.duplicate_events} duplicates skipped. The
+              original file and raw participant identifiers were not retained.
+            </p>
+            <div className="actions">
+              {offlineImport.data.result_alert_ids[0] && (
+                <Link
+                  className="button"
+                  to={`/alerts/${offlineImport.data.result_alert_ids[0]}`}
+                >
+                  Open imported alert
+                </Link>
+              )}
+              {offlineImport.data.result_post_ids[0] && (
+                <Link
+                  className="button secondary"
+                  to={`/posts/${offlineImport.data.result_post_ids[0]}`}
+                >
+                  Open imported surface
                 </Link>
               )}
             </div>
@@ -627,8 +1065,8 @@ function SafetyPage({ token }: { token: string }) {
           <p className="eyebrow">Boundaries by design</p>
           <h1>Safety & privacy</h1>
           <p>
-            RaidShield observes activity patterns only on an account that
-            voluntarily authorized monitoring.
+            RaidShield analyzes only offline datasets that an operator is
+            authorized to process.
           </p>
         </div>
       </div>
@@ -638,16 +1076,16 @@ function SafetyPage({ token }: { token: string }) {
           <h2>What it observes</h2>
           <p>
             Timing, near-duplicate text patterns, first-seen participation,
-            reply concentration, and pseudonymous overlap inside the protected
-            comment surface.
+            reply concentration, and pseudonymous overlap inside the imported
+            comment dataset.
           </p>
         </section>
         <section>
           <h2>What it cannot know</h2>
           <p>
-            It cannot see direct messages, private activity, off-platform
-            planning, or a person’s intent. It does not infer protected traits
-            or build individual risk scores.
+            It cannot see or verify anything outside the imported file, know a
+            person’s intent, infer protected traits, or build individual risk
+            scores.
           </p>
         </section>
         <section>
@@ -657,6 +1095,15 @@ function SafetyPage({ token }: { token: string }) {
             HMAC digests. Raw text is hidden by default; if enabled, it is
             encrypted locally and expires after 24 hours by default. Aggregate
             pseudonymous records expire after 30 days.
+          </p>
+        </section>
+        <section>
+          <h2>Experimental content screening</h2>
+          <p>
+            If explicitly enabled, an optional local multilingual model can
+            surface potential insults, targeted hostility, or threats for human
+            review. Its score remains separate from coordination and does not
+            determine hate, intent, identity, or a policy violation.
           </p>
         </section>
         <section>
@@ -714,7 +1161,7 @@ export default function App() {
       </header>
       <Routes>
         <Route path="/" element={<Dashboard />} />
-        <Route path="/posts/:id" element={<PostPage />} />
+        <Route path="/posts/:id" element={<PostPage token={token} />} />
         <Route path="/alerts/:id" element={<AlertPage token={token} />} />
         <Route
           path="/test-lab"

@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from app.schemas import NormalizedInput
+from app.services.reply_context import enrich_reply_context
 
 
 class ReplayAdapter:
@@ -47,4 +48,4 @@ class ReplayAdapter:
             )
             for item in data["events"]
         ]
-        return data, events
+        return data, enrich_reply_context(events)
